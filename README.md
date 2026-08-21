@@ -29,6 +29,12 @@ export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
 The output is written to `build/compact-city-debug.apk`. It is arm64-oriented, zip-aligned, and debug-signed for local phone testing. Verify the package with Android Build-Tools before installing it with `adb install -r build/compact-city-debug.apk`. A physical Android device is still required to confirm touch behavior and on-device FPS.
 
+## Jade Harbor feature slice
+
+The current prototype includes an original, copyright-safe mountain-harbor district inspired by broad Chinese architectural motifs without importing any third-party game assets. It adds a jade-water inlet, harbor bridge and piers, pavilion buildings, stone steps, lantern poles, market awnings, a generated mountain-harbor backdrop, a generated lantern banner texture, and a generated stone paving texture. The explorer avatar now has a teal travel coat, warm scarf, satchel, and walking staff.
+
+The camera uses an elevated orbit view centered slightly above the explorer. On desktop, the mouse wheel and `+`/`-` keys zoom in and out. On touch devices, the `+` and `−` camera buttons and a two-finger pinch change camera distance, while a swipe on the right side orbits the view. Zoom is clamped to keep the explorer readable and prevent the camera from clipping through the district.
+
 ### Android startup crash fix
 
 The crash recording showed: `Couldn't load project data at path ''. Is the .pck file missing?` The first repair corrected the `_cl_` file to Godot's binary command-line format. The follow-up repair corrected the pack URI as well: Android asset files are addressed through Godot's `assets://` scheme, so the build pipeline now encodes `--main-pack assets://data.pck` through `tools/write_command_line.py`. The APK is rebuilt and statically verified after both changes.

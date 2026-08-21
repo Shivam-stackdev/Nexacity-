@@ -3,6 +3,9 @@ extends Node3D
 const PLAYER_SCENE := preload("res://scenes/player/Player.tscn")
 const TOUCH_CONTROLS := preload("res://scripts/ui/TouchControls.gd")
 const DEBUG_HUD := preload("res://scripts/ui/DebugHud.gd")
+const MOUNTAIN_BACKDROP := preload("res://assets/liyue_inspired_mountain_backdrop.png")
+const LANTERN_BANNER := preload("res://assets/lantern_banner_texture.png")
+const STONE_PAVING := preload("res://assets/stone_paving_texture.png")
 
 var palette := {
 	"ground": Color("#718879"),
@@ -17,7 +20,11 @@ var palette := {
 	"tree_trunk": Color("#76543c"),
 	"school": Color("#dfd6b8"),
 	"petrol": Color("#e7e8e4"),
-	"accent": Color("#f2d35f")
+	"accent": Color("#f2d35f"),
+	"jade": Color("#4a9b88"),
+	"water": Color("#277f83"),
+	"roof": Color("#23434a"),
+	"stone": Color("#8d8170")
 }
 
 func _ready() -> void:
@@ -63,7 +70,7 @@ func _setup_environment() -> void:
 	add_child(sun)
 
 func _build_city() -> void:
-	_add_box("Ground", Vector3(72, 0.5, 72), Vector3(0, -0.25, 0), palette["ground"], true)
+	_add_textured_box("StoneGround", Vector3(72, 0.5, 72), Vector3(0, -0.25, 0), STONE_PAVING, true)
 	_add_box("MainRoad", Vector3(9, 0.08, 72), Vector3(0, 0.03, 0), palette["road"], false)
 	_add_box("CrossRoad", Vector3(72, 0.08, 8), Vector3(0, 0.04, -4), palette["road"], false)
 	_add_box("SideRoadEast", Vector3(7, 0.08, 46), Vector3(20, 0.05, 12), palette["road"], false)
@@ -87,6 +94,7 @@ func _build_city() -> void:
 	_build_school(Vector3(19, 0, -28))
 	_build_petrol_station(Vector3(28, 0, 29))
 	_build_bus_stop(Vector3(-7, 0, -15))
+	_build_harbor_district()
 	_build_race_markers()
 	_add_signs()
 
@@ -132,6 +140,63 @@ func _build_bus_stop(origin: Vector3) -> void:
 	_add_box("BusBench", Vector3(2.5, 0.25, 0.5), origin + Vector3(0, 0.6, 0.5), palette["tree_trunk"], false)
 	_add_box("BusStopPost", Vector3(0.16, 2.0, 0.16), origin + Vector3(-1.8, 1.0, -0.7), palette["accent"], true)
 
+func _build_harbor_district() -> void:
+	# A compact original mountain-harbor district layered over the foundation city.
+	_add_box("JadeWater", Vector3(42, 0.12, 10), Vector3(0, 0.02, -27), palette["water"], false)
+	_add_box("HarborWalk", Vector3(44, 0.22, 2.4), Vector3(0, 0.14, -21.5), palette["stone"], true)
+	_add_box("HarborBridge", Vector3(16, 0.5, 4.0), Vector3(0, 0.35, -27), palette["stone"], true)
+	for x in [-18.0, -12.0, 12.0, 18.0]:
+		_add_box("Pier", Vector3(2.8, 0.3, 6.0), Vector3(x, 0.18, -27), palette["tree_trunk"], true)
+		_add_lantern_pole(Vector3(x, 0, -23.0))
+
+	_add_pavilion(Vector3(-17, 0, -16), Vector3(9, 3.8, 7), palette["building_a"])
+	_add_pavilion(Vector3(17, 0, -16), Vector3(9, 4.5, 7), palette["building_b"])
+	_add_pavilion(Vector3(0, 0, -31), Vector3(10, 5.5, 7), palette["jade"])
+	_add_market_awning(Vector3(25, 0, 21))
+	_add_market_awning(Vector3(32, 0, 21))
+	for x in range(-28, 29, 8):
+		_add_lantern_pole(Vector3(x, 0, -20.0))
+	_add_stone_steps(Vector3(-28, 0, -19))
+	_add_backdrop()
+
+func _add_pavilion(origin: Vector3, size: Vector3, body_color: Color) -> void:
+	_add_box("HarborPavilion", size, origin + Vector3(0, size.y * 0.5, 0), body_color, true)
+	_add_box("PavilionRoof", Vector3(size.x + 1.4, 0.35, size.z + 1.4), origin + Vector3(0, size.y + 0.25, 0), palette["roof"], false)
+	_add_box("PavilionRoofTrim", Vector3(size.x + 2.2, 0.18, 0.45), origin + Vector3(0, size.y + 0.55, -size.z * 0.5), palette["accent"], false)
+	_add_box("PavilionDoor", Vector3(1.8, 2.2, 0.12), origin + Vector3(0, 1.1, size.z * 0.5 + 0.08), palette["roof"], false)
+	for x in [-size.x * 0.35, size.x * 0.35]:
+		_add_cylinder("PavilionPost", 0.16, size.y, origin + Vector3(x, size.y * 0.5, size.z * 0.5 + 0.18), palette["tree_trunk"], true)
+
+func _add_market_awning(origin: Vector3) -> void:
+	_add_box("MarketStall", Vector3(5.2, 2.0, 3.6), origin + Vector3(0, 1.0, 0), palette["building_a"], true)
+	_add_textured_box("LanternBannerAwning", Vector3(6.0, 0.16, 4.4), origin + Vector3(0, 2.35, 0), LANTERN_BANNER, false)
+	_add_box("MarketCounter", Vector3(4.8, 0.7, 0.55), origin + Vector3(0, 1.1, 2.0), palette["tree_trunk"], false)
+	_add_lantern_pole(origin + Vector3(-2.5, 0, 1.0))
+
+func _add_lantern_pole(position: Vector3) -> void:
+	_add_cylinder("LanternPole", 0.10, 2.7, position + Vector3(0, 1.35, 0), palette["tree_trunk"], true)
+	_add_sphere("LanternGlow", 0.42, position + Vector3(0, 2.55, 0), palette["accent"], false)
+	_add_box("LanternCap", Vector3(0.58, 0.08, 0.58), position + Vector3(0, 2.92, 0), palette["roof"], false)
+
+func _add_stone_steps(origin: Vector3) -> void:
+	for i in range(5):
+		_add_box("HarborStep", Vector3(8.0 - i * 0.7, 0.35, 1.2), origin + Vector3(0, 0.18 + i * 0.35, i * 1.1), palette["stone"], true)
+
+func _add_backdrop() -> void:
+	var backdrop := MeshInstance3D.new()
+	backdrop.name = "MountainHarborBackdrop"
+	var quad := QuadMesh.new()
+	quad.size = Vector2(104.0, 58.0)
+	backdrop.mesh = quad
+	backdrop.position = Vector3(0, 25.0, -43.0)
+	backdrop.rotation_degrees = Vector3(0, 180, 0)
+	var material := StandardMaterial3D.new()
+	material.albedo_texture = MOUNTAIN_BACKDROP
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	backdrop.material_override = material
+	add_child(backdrop)
+
 func _build_race_markers() -> void:
 	var points := [Vector3(-26, 0.1, 31), Vector3(0, 0.1, 31), Vector3(26, 0.1, 31), Vector3(31, 0.1, 10), Vector3(31, 0.1, -14), Vector3(10, 0.1, -31)]
 	for point in points:
@@ -142,6 +207,28 @@ func _add_signs() -> void:
 	_add_box("CityGate", Vector3(0.35, 3.0, 0.35), Vector3(-4.5, 1.5, -31), palette["building_a"], true)
 	_add_box("CityGate2", Vector3(0.35, 3.0, 0.35), Vector3(4.5, 1.5, -31), palette["building_a"], true)
 	_add_box("CityGateTop", Vector3(9.35, 0.35, 0.35), Vector3(0, 3.0, -31), palette["building_a"], true)
+
+func _add_textured_box(node_name: String, size: Vector3, position: Vector3, texture: Texture2D, with_collision: bool) -> Node3D:
+	var container: Node3D = StaticBody3D.new() if with_collision else Node3D.new()
+	container.name = node_name
+	container.position = position
+	var mesh_instance := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	mesh_instance.mesh = mesh
+	var material := StandardMaterial3D.new()
+	material.albedo_texture = texture
+	material.roughness = 0.88
+	mesh_instance.material_override = material
+	container.add_child(mesh_instance)
+	if with_collision:
+		var collision := CollisionShape3D.new()
+		var shape := BoxShape3D.new()
+		shape.size = size
+		collision.shape = shape
+		container.add_child(collision)
+	add_child(container)
+	return container
 
 func _add_box(node_name: String, size: Vector3, position: Vector3, color: Color, with_collision: bool) -> Node3D:
 	var container: Node3D = StaticBody3D.new() if with_collision else Node3D.new()

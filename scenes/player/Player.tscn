@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/Player.gd" id="1_player"]
 
@@ -20,6 +20,37 @@ rings = 4
 [sub_resource type="StandardMaterial3D" id="Material_head"]
 albedo_color = Color(0.96, 0.7, 0.55, 1)
 roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Material_coat"]
+albedo_color = Color(0.06, 0.28, 0.30, 1)
+roughness = 0.82
+
+[sub_resource type="StandardMaterial3D" id="Material_scarf"]
+albedo_color = Color(0.82, 0.24, 0.12, 1)
+roughness = 0.78
+
+[sub_resource type="StandardMaterial3D" id="Material_gold"]
+albedo_color = Color(0.93, 0.66, 0.19, 1)
+roughness = 0.72
+
+[sub_resource type="BoxMesh" id="BoxMesh_coat"]
+material = SubResource("Material_coat")
+size = Vector3(0.95, 0.45, 0.58)
+
+[sub_resource type="BoxMesh" id="BoxMesh_scarf"]
+material = SubResource("Material_scarf")
+size = Vector3(0.62, 0.14, 0.72)
+
+[sub_resource type="BoxMesh" id="BoxMesh_satchel"]
+material = SubResource("Material_scarf")
+size = Vector3(0.42, 0.55, 0.22)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_staff"]
+material = SubResource("Material_gold")
+top_radius = 0.045
+bottom_radius = 0.055
+height = 1.55
+radial_segments = 8
 
 [sub_resource type="SphereMesh" id="SphereMesh_head"]
 material = SubResource("Material_head")
@@ -45,3 +76,21 @@ mesh = SubResource("SphereMesh_head")
 
 [node name="Marker" type="Marker3D" parent="."]
 position = Vector3(0, 1.2, 0)
+
+[node name="ExplorerCoat" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.0, 0)
+mesh = SubResource("BoxMesh_coat")
+
+[node name="WarmScarf" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.42, -0.08)
+mesh = SubResource("BoxMesh_scarf")
+
+[node name="Satchel" type="MeshInstance3D" parent="."]
+position = Vector3(-0.42, 0.98, 0.16)
+rotation_degrees = Vector3(0, 24, 0)
+mesh = SubResource("BoxMesh_satchel")
+
+[node name="WalkingStaff" type="MeshInstance3D" parent="."]
+position = Vector3(0.55, 0.78, -0.02)
+rotation_degrees = Vector3(0, 0, -8)
+mesh = SubResource("CylinderMesh_staff")

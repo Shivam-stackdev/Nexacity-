@@ -10,7 +10,7 @@ func _ready() -> void:
 	status_label.position = Vector2(28, 24)
 	status_label.add_theme_font_size_override("font_size", 22)
 	status_label.add_theme_color_override("font_color", Color(0.92, 0.96, 1.0))
-	status_label.text = "COMPACT CITY  /  FOUNDATION BUILD\nWASD: move   SHIFT: run   Swipe right: look"
+	status_label.text = "JADE HARBOR DISTRICT  /  EXPLORER BUILD\nWASD / joystick: move   SHIFT / RUN: sprint   Swipe right: orbit\nMouse wheel, +/- or pinch: zoom   + / − buttons: camera distance"
 	add_child(status_label)
 
 	fps_label = Label.new()
