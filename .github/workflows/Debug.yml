@@ -31,6 +31,7 @@ jobs:
         uses: chickensoft-games/setup-godot@v2
         with:
           version: ${{ env.GODOT_VERSION }}
+          use-dotnet: false
           include-templates: true
 
       - name: Install Android command-line tools
