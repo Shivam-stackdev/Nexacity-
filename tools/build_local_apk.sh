@@ -24,7 +24,7 @@ rm -rf "$WORK_DIR" "$UNSIGNED" "$ALIGNED" "$APK"
 mkdir -p "$WORK_DIR/assets"
 cp "$PCK" "$WORK_DIR/assets/data.pck"
 python3 "$PROJECT_DIR/tools/write_command_line.py" "$WORK_DIR/assets/_cl_" \
-  --main-pack assets/data.pck \
+  --main-pack assets://data.pck \
   --xr_mode_regular \
   --xr-mode off \
   --fullscreen

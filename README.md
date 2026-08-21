@@ -31,7 +31,7 @@ The output is written to `build/compact-city-debug.apk`. It is arm64-oriented, z
 
 ### Android startup crash fix
 
-The previous APK wrote `assets/_cl_` as plain text. Godot Android expects this file to use its binary command-line format: a little-endian argument count followed by a length-prefixed UTF-8 string for each argument. The build pipeline now generates that format through `tools/write_command_line.py`, including the `--main-pack assets/data.pck` argument. The APK is rebuilt and statically verified after this change.
+The crash recording showed: `Couldn't load project data at path ''. Is the .pck file missing?` The first repair corrected the `_cl_` file to Godot's binary command-line format. The follow-up repair corrected the pack URI as well: Android asset files are addressed through Godot's `assets://` scheme, so the build pipeline now encodes `--main-pack assets://data.pck` through `tools/write_command_line.py`. The APK is rebuilt and statically verified after both changes.
 
 ## Structure
 
