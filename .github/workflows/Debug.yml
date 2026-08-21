@@ -71,15 +71,55 @@ jobs:
 
           [resource]
           export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/java_sdk_path = "$JAVA_HOME"
           export/android/debug_keystore = "$HOME/.android/debug.keystore"
           EOF
 
-      - name: Export configured debug APK
+      - name: Export Godot project pack
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p build
-          godot --headless --path . --export-debug "Android Debug APK" build/nexacity-debug.apk
+          godot --version
+          godot --headless --path . --export-pack "Android Debug APK" build/nexacity.pck
+          test -s build/nexacity.pck
+
+      - name: Assemble and sign debug APK from official Godot template
+        shell: bash
+        run: |
+          set -euo pipefail
+          TEMPLATE_ARCHIVE="/tmp/godot-export-templates.tpz"
+          TEMPLATE_DIR="/tmp/godot-export-templates"
+          WORK_DIR="build/apk_assets"
+          UNSIGNED="build/nexacity-unsigned.apk"
+          ALIGNED="build/nexacity-aligned.apk"
+          APK="build/nexacity-debug.apk"
+          curl --fail --location --retry 3 --output "$TEMPLATE_ARCHIVE" \
+            https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz
+          rm -rf "$TEMPLATE_DIR" "$WORK_DIR" "$UNSIGNED" "$ALIGNED" "$APK"
+          mkdir -p "$TEMPLATE_DIR" "$WORK_DIR/assets"
+          unzip -q "$TEMPLATE_ARCHIVE" -d "$TEMPLATE_DIR"
+          TEMPLATE_APK="$(find "$TEMPLATE_DIR" -type f -name android_debug.apk -print -quit)"
+          test -n "$TEMPLATE_APK"
+          cp build/nexacity.pck "$WORK_DIR/assets/data.pck"
+          python3 tools/write_command_line.py "$WORK_DIR/assets/_cl_" \
+            --main-pack assets://data.pck \
+            --xr_mode_regular \
+            --xr-mode off \
+            --fullscreen
+          cp "$TEMPLATE_APK" "$UNSIGNED"
+          (
+            cd "$WORK_DIR"
+            zip -q -r "../../$UNSIGNED" assets
+          )
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f 4 "$UNSIGNED" "$ALIGNED"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign \
+            --ks "$HOME/.android/debug.keystore" \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --ks-key-alias androiddebugkey \
+            --out "$APK" "$ALIGNED"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
           test -s build/nexacity-debug.apk
 
       - name: Upload debug APK artifact
