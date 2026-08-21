@@ -8,3 +8,4 @@ export.cfg
 .DS_Store
 .vscode/
 .idea/
+*.import
