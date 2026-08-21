@@ -1,17 +1,7 @@
-name: Android Debug APK
+name: Build Nexacity Debug APK
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feature/jade-harbor-3d-controls
-    paths:
-      - "project.godot"
-      - "export_presets.cfg"
-      - "scenes/**"
-      - "scripts/**"
-      - "assets/**"
-      - ".github/workflows/android-debug.yml"
 
 permissions:
   contents: read
@@ -23,9 +13,10 @@ jobs:
     env:
       GODOT_VERSION: "4.4.1"
       ANDROID_HOME: ${{ github.workspace }}/android-sdk
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
 
     steps:
-      - name: Check out source
+      - name: Check out feature branch source
         uses: actions/checkout@v4
 
       - name: Set up Java 17
@@ -56,13 +47,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # sdkmanager closes the input pipe after license acceptance; allowing that
+          # expected SIGPIPE prevents `yes` from failing this step under pipefail.
+          set +o pipefail
           yes | sdkmanager --licenses >/dev/null
+          set -o pipefail
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Configure Godot Android paths
+      - name: Create debug keystore and configure Godot Android paths
         shell: bash
         run: |
-          mkdir -p "$HOME/.config/godot"
+          set -euo pipefail
+          mkdir -p "$HOME/.android" "$HOME/.config/godot"
+          keytool -genkeypair -noprompt -keystore "$HOME/.android/debug.keystore" \
+            -storepass android -keypass android -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
           cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
           [gd_resource type="EditorSettings" format=3]
 
