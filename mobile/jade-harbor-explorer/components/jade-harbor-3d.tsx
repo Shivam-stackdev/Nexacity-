@@ -1,12 +1,11 @@
 import { GLView, type ExpoWebGLRenderingContext } from "expo-gl";
 import { Renderer } from "expo-three";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 import * as THREE from "three";
 
 import {
   EXPLORER_START,
-  landmarks3D,
   landmarkAt3D,
   createExplorerMotion,
   requestJump,
@@ -14,6 +13,19 @@ import {
   type Landmark3D,
   type Vec3,
 } from "@/lib/jade-harbor-3d-world";
+import { getHarborDayCycle, type HarborTimeOfDay } from "@/lib/day-cycle";
+import { resolveJoystickInput, smoothAxis } from "@/lib/mobile-controls";
+
+type HarborLighting = {
+  sun: THREE.DirectionalLight;
+  skyLight: THREE.HemisphereLight;
+  waterMaterial: THREE.MeshStandardMaterial;
+  lanternLights: THREE.PointLight[];
+  emissiveMaterials: THREE.MeshStandardMaterial[];
+  skyColor: THREE.Color;
+  progress: number;
+  frameCount: number;
+};
 
 type SceneRuntime = {
   renderer: THREE.WebGLRenderer;
@@ -21,6 +33,7 @@ type SceneRuntime = {
   camera: THREE.PerspectiveCamera;
   explorer: THREE.Group;
   gl: ExpoWebGLRenderingContext;
+  lighting: HarborLighting;
 };
 
 const COLORS = {
@@ -34,6 +47,18 @@ const COLORS = {
   jade: 0x2d9b84,
   bronze: 0xbd8a37,
   lantern: 0xf3ae4b,
+};
+
+const CYCLE_COLORS = {
+  daySky: new THREE.Color(0x7bc6d1),
+  sunsetSky: new THREE.Color(0xc86547),
+  nightSky: new THREE.Color(0x102842),
+  daySun: new THREE.Color(0xffe2a8),
+  sunsetSun: new THREE.Color(0xff9656),
+  nightSun: new THREE.Color(0x7188c6),
+  dayWater: new THREE.Color(0x2b8291),
+  sunsetWater: new THREE.Color(0x8c4a5b),
+  nightWater: new THREE.Color(0x173d61),
 };
 
 function makeMaterial(color: number, roughness = 0.8, metalness = 0) {
@@ -166,12 +191,50 @@ function buildWorld(scene: THREE.Scene) {
   jadeGate.add(mesh(new THREE.ConeGeometry(2.9, 2.3, 4), bronze, 0, 5.15, 0));
   jadeGate.position.set(14, 0, -16);
   scene.add(jadeGate);
+
+  return waterMaterial;
+}
+
+function updateHarborLighting(runtime: SceneRuntime) {
+  const cycle = getHarborDayCycle(runtime.lighting.progress);
+  const { skyColor, sun, skyLight, waterMaterial, lanternLights, emissiveMaterials } = runtime.lighting;
+  skyColor.copy(CYCLE_COLORS.nightSky).lerp(CYCLE_COLORS.daySky, cycle.daylight);
+  skyColor.lerp(CYCLE_COLORS.sunsetSky, cycle.sunset);
+  runtime.renderer.setClearColor(skyColor, 1);
+  if (runtime.scene.fog instanceof THREE.Fog) {
+    runtime.scene.fog.color.copy(skyColor);
+    runtime.scene.fog.near = 27 - cycle.night * 6;
+    runtime.scene.fog.far = 78 - cycle.night * 18;
+  }
+
+  sun.color.copy(CYCLE_COLORS.nightSun).lerp(CYCLE_COLORS.daySun, cycle.daylight);
+  sun.color.lerp(CYCLE_COLORS.sunsetSun, cycle.sunset);
+  sun.intensity = 0.34 + cycle.daylight * 1.85 + cycle.sunset * 0.55;
+  sun.position.set(Math.cos(runtime.lighting.progress * Math.PI * 2) * 25, 8 + cycle.daylight * 26, 14);
+  skyLight.color.copy(CYCLE_COLORS.nightSky).lerp(CYCLE_COLORS.daySky, cycle.daylight);
+  skyLight.color.lerp(CYCLE_COLORS.sunsetSky, cycle.sunset * 0.65);
+  skyLight.groundColor.setHex(cycle.night > 0.55 ? 0x122836 : 0x2f5553);
+  skyLight.intensity = 0.58 + cycle.daylight * 1.75;
+
+  waterMaterial.color.copy(CYCLE_COLORS.nightWater).lerp(CYCLE_COLORS.dayWater, cycle.daylight);
+  waterMaterial.color.lerp(CYCLE_COLORS.sunsetWater, cycle.sunset * 0.8);
+  waterMaterial.emissive.copy(waterMaterial.color).multiplyScalar(0.04 + cycle.night * 0.1);
+  const lanternFactor = 0.2 + cycle.night * 1.4 + cycle.sunset * 0.72;
+  lanternLights.forEach((light) => {
+    light.intensity = lanternFactor;
+  });
+  emissiveMaterials.forEach((material) => {
+    material.emissiveIntensity = 0.08 + lanternFactor * 0.45;
+  });
+
+  return cycle.label;
 }
 
 export function JadeHarbor3D() {
   const runtimeRef = useRef<SceneRuntime | null>(null);
   const frameRef = useRef<number | null>(null);
   const directionRef = useRef<Vec3>({ x: 0, z: 0 });
+  const joystickTargetRef = useRef<Vec3>({ x: 0, z: 0 });
   const explorerPositionRef = useRef<Vec3>(EXPLORER_START);
   const explorerMotionRef = useRef(createExplorerMotion(EXPLORER_START));
   const activeLandmarkRef = useRef<string | null>(null);
@@ -180,12 +243,14 @@ export function JadeHarbor3D() {
   const jumpQueuedRef = useRef(false);
   const sprintRef = useRef(false);
   const airborneRef = useRef(false);
+  const joystickKnob = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const [paused, setPaused] = useState(false);
-  const [joystick, setJoystick] = useState<Vec3>({ x: 0, z: 0 });
+  const [joystickActive, setJoystickActive] = useState(false);
   const [landmark, setLandmark] = useState<Landmark3D | null>(null);
   const [sceneStats, setSceneStats] = useState({ drawCalls: 0, triangles: 0 });
   const [isSprinting, setIsSprinting] = useState(false);
   const [isAirborne, setIsAirborne] = useState(false);
+  const [timeOfDay, setTimeOfDay] = useState<HarborTimeOfDay>("SUNSET");
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -203,17 +268,19 @@ export function JadeHarbor3D() {
     explorerPositionRef.current = EXPLORER_START;
     explorerMotionRef.current = createExplorerMotion(EXPLORER_START);
     directionRef.current = { x: 0, z: 0 };
+    joystickTargetRef.current = { x: 0, z: 0 };
     activeLandmarkRef.current = null;
     jumpQueuedRef.current = false;
     sprintRef.current = false;
     airborneRef.current = false;
-    setJoystick({ x: 0, z: 0 });
+    joystickKnob.setValue({ x: 0, y: 0 });
+    setJoystickActive(false);
     setLandmark(null);
     setIsAirborne(false);
     setIsSprinting(false);
     setPaused(false);
     if (runtime) runtime.explorer.position.set(EXPLORER_START.x, 0, EXPLORER_START.z);
-  }, []);
+  }, [joystickKnob]);
 
   const queueJump = useCallback(() => {
     if (explorerMotionRef.current.grounded) jumpQueuedRef.current = true;
@@ -222,6 +289,13 @@ export function JadeHarbor3D() {
   const setSprintActive = useCallback((active: boolean) => {
     sprintRef.current = active;
     setIsSprinting(active);
+  }, []);
+
+  const advanceTimeOfDay = useCallback(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime) return;
+    runtime.lighting.progress = (runtime.lighting.progress + 0.25) % 1;
+    setTimeOfDay(updateHarborLighting(runtime));
   }, []);
 
   const onContextCreate = useCallback((gl: ExpoWebGLRenderingContext) => {
@@ -236,13 +310,42 @@ export function JadeHarbor3D() {
     camera.position.set(0, 13.2, 30);
     const explorer = createExplorer();
     scene.add(explorer);
-    scene.add(new THREE.HemisphereLight(0xfff2cb, 0x24494c, 2.3));
+    const skyLight = new THREE.HemisphereLight(0xfff2cb, 0x24494c, 2.3);
+    scene.add(skyLight);
     const sun = new THREE.DirectionalLight(0xffdca0, 2.2);
     sun.position.set(-18, 27, 12);
     scene.add(sun);
-    buildWorld(scene);
+    const waterMaterial = buildWorld(scene);
+    const lanternLights: THREE.PointLight[] = [];
+    const emissiveMaterials: THREE.MeshStandardMaterial[] = [];
+    scene.traverse((object) => {
+      if (object instanceof THREE.PointLight) lanternLights.push(object);
+      if (object instanceof THREE.Mesh) {
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
+        materials.forEach((material) => {
+          if (material instanceof THREE.MeshStandardMaterial && material.emissive.getHex() !== 0) emissiveMaterials.push(material);
+        });
+      }
+    });
 
-    runtimeRef.current = { renderer, scene, camera, explorer, gl };
+    runtimeRef.current = {
+      renderer,
+      scene,
+      camera,
+      explorer,
+      gl,
+      lighting: {
+        sun,
+        skyLight,
+        waterMaterial,
+        lanternLights,
+        emissiveMaterials,
+        skyColor: new THREE.Color(0xc86547),
+        progress: 0.72,
+        frameCount: 0,
+      },
+    };
+    setTimeOfDay(updateHarborLighting(runtimeRef.current));
     let lastTime = Date.now();
     const render = () => {
       frameRef.current = requestAnimationFrame(render);
@@ -253,6 +356,10 @@ export function JadeHarbor3D() {
       lastTime = now;
 
       if (!pausedRef.current) {
+        directionRef.current = {
+          x: smoothAxis(directionRef.current.x, joystickTargetRef.current.x, delta),
+          z: smoothAxis(directionRef.current.z, joystickTargetRef.current.z, delta),
+        };
         let motion = explorerMotionRef.current;
         if (jumpQueuedRef.current) {
           motion = requestJump(motion);
@@ -280,6 +387,12 @@ export function JadeHarbor3D() {
           activeLandmarkRef.current = nextId;
           setLandmark(nextLandmark);
         }
+
+        runtime.lighting.progress = (runtime.lighting.progress + delta / 210) % 1;
+        runtime.lighting.frameCount += 1;
+        if (runtime.lighting.frameCount % 18 === 0) {
+          setTimeOfDay(updateHarborLighting(runtime));
+        }
       }
 
       runtime.renderer.render(runtime.scene, runtime.camera);
@@ -300,24 +413,29 @@ export function JadeHarbor3D() {
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => setJoystickActive(true),
         onPanResponderMove: (_, gesture) => {
-          const radius = 44;
-          const x = Math.max(-radius, Math.min(radius, gesture.dx));
-          const z = Math.max(-radius, Math.min(radius, gesture.dy));
-          const next = { x: x / radius, z: z / radius };
-          directionRef.current = next;
-          setJoystick(next);
+          const input = resolveJoystickInput(gesture.dx, gesture.dy, 44);
+          joystickTargetRef.current = { x: input.direction.x, z: input.direction.y };
+          setJoystickActive(input.active);
+          Animated.timing(joystickKnob, {
+            toValue: { x: input.knob.x, y: input.knob.y },
+            duration: 45,
+            useNativeDriver: true,
+          }).start();
         },
         onPanResponderRelease: () => {
-          directionRef.current = { x: 0, z: 0 };
-          setJoystick({ x: 0, z: 0 });
+          joystickTargetRef.current = { x: 0, z: 0 };
+          setJoystickActive(false);
+          Animated.spring(joystickKnob, { toValue: { x: 0, y: 0 }, damping: 16, stiffness: 260, useNativeDriver: true }).start();
         },
         onPanResponderTerminate: () => {
-          directionRef.current = { x: 0, z: 0 };
-          setJoystick({ x: 0, z: 0 });
+          joystickTargetRef.current = { x: 0, z: 0 };
+          setJoystickActive(false);
+          Animated.spring(joystickKnob, { toValue: { x: 0, y: 0 }, damping: 16, stiffness: 260, useNativeDriver: true }).start();
         },
       }),
-    [],
+    [joystickKnob],
   );
 
   return (
@@ -327,12 +445,15 @@ export function JadeHarbor3D() {
         <View style={styles.topHud}>
           <View style={styles.districtChip}>
             <View style={styles.liveDot} />
-            <Text style={styles.districtText}>3D OPEN WORLD · JADE HARBOR</Text>
+            <Text style={styles.districtText}>{timeOfDay} · JADE HARBOR</Text>
           </View>
           <View style={styles.topActions}>
             <View style={styles.statsChip}>
               <Text style={styles.statsText}>{sceneStats.drawCalls} DC · {sceneStats.triangles} TRIS</Text>
             </View>
+            <Pressable onPress={advanceTimeOfDay} style={({ pressed }) => [styles.timeButton, pressed && styles.pressed]}>
+              <Text style={styles.timeButtonText}>TIME</Text>
+            </Pressable>
             <Pressable onPress={() => setPaused(true)} style={({ pressed }) => [styles.pauseButton, pressed && styles.pressed]}>
               <Text style={styles.pauseButtonText}>Ⅱ</Text>
             </Pressable>
@@ -359,10 +480,11 @@ export function JadeHarbor3D() {
 
         <View style={styles.controls}>
           <View {...joystickResponder.panHandlers} style={styles.joystickBase}>
-            <View style={[styles.joystickThumb, { transform: [{ translateX: joystick.x * 44 }, { translateY: joystick.z * 44 }] }]} />
+            <View style={[styles.joystickRing, joystickActive && styles.joystickRingActive]} />
+            <Animated.View style={[styles.joystickThumb, { transform: joystickKnob.getTranslateTransform() }]} />
           </View>
           <View style={styles.controlHintWrap}>
-            <Text style={styles.controlHint}>{isAirborne ? "AIRBORNE" : isSprinting ? "SPRINTING" : "DRAG TO WALK"}</Text>
+            <Text style={styles.controlHint}>{isAirborne ? "AIRBORNE" : isSprinting ? "SPRINTING" : joystickActive ? "ANALOG MOVE" : "DRAG TO WALK"}</Text>
             <View style={styles.actionRow}>
               <Pressable onPress={queueJump} style={({ pressed }) => [styles.jumpButton, pressed && styles.pressed]}>
                 <Text style={styles.jumpText}>JUMP</Text>
@@ -406,6 +528,8 @@ const styles = StyleSheet.create({
   topActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   statsChip: { backgroundColor: "rgba(8, 21, 25, 0.72)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(174, 235, 211, 0.26)", paddingHorizontal: 8, paddingVertical: 7 },
   statsText: { color: "#BDEDDC", fontSize: 9, fontWeight: "800", letterSpacing: 0.35 },
+  timeButton: { borderRadius: 12, backgroundColor: "rgba(138, 79, 54, 0.82)", borderWidth: 1, borderColor: "rgba(255, 205, 144, 0.48)", paddingHorizontal: 9, paddingVertical: 7 },
+  timeButtonText: { color: "#FFE2B5", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
   pauseButton: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(8, 21, 25, 0.86)", borderWidth: 1, borderColor: "rgba(239, 195, 105, 0.38)", alignItems: "center", justifyContent: "center" },
   pauseButtonText: { color: "#F4E8C8", fontSize: 17, fontWeight: "900" },
   landmarkCard: { position: "absolute", left: 16, right: 16, bottom: 128, flexDirection: "row", gap: 11, borderRadius: 18, padding: 14, backgroundColor: "rgba(18, 35, 37, 0.96)", borderWidth: 1, borderColor: "rgba(244, 222, 159, 0.35)" },
@@ -419,8 +543,10 @@ const styles = StyleSheet.create({
   explorePrompt: { position: "absolute", bottom: 136, left: 44, right: 44, alignItems: "center" },
   explorePromptText: { color: "rgba(31, 51, 47, 0.9)", backgroundColor: "rgba(255, 239, 195, 0.78)", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 7, fontSize: 11, fontWeight: "700" },
   controls: { position: "absolute", left: 18, right: 18, bottom: 20, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
-  joystickBase: { width: 100, height: 100, borderRadius: 50, backgroundColor: "rgba(10, 31, 34, 0.44)", borderWidth: 1, borderColor: "rgba(255, 238, 189, 0.35)", alignItems: "center", justifyContent: "center" },
-  joystickThumb: { width: 46, height: 46, borderRadius: 23, backgroundColor: "rgba(244, 210, 132, 0.86)", borderWidth: 3, borderColor: "#2B5155" },
+  joystickBase: { width: 112, height: 112, borderRadius: 56, backgroundColor: "rgba(9, 29, 34, 0.38)", borderWidth: 1, borderColor: "rgba(255, 238, 189, 0.38)", alignItems: "center", justifyContent: "center" },
+  joystickRing: { position: "absolute", width: 76, height: 76, borderRadius: 38, borderWidth: 1, borderColor: "rgba(236, 200, 125, 0.34)", backgroundColor: "rgba(26, 73, 78, 0.14)" },
+  joystickRingActive: { borderColor: "rgba(247, 218, 139, 0.8)", backgroundColor: "rgba(235, 147, 83, 0.14)" },
+  joystickThumb: { width: 48, height: 48, borderRadius: 24, backgroundColor: "rgba(244, 210, 132, 0.9)", borderWidth: 3, borderColor: "#2B5155", shadowColor: "#FAD487", shadowOpacity: 0.4, shadowRadius: 10, elevation: 3 },
   controlHintWrap: { alignItems: "flex-end", gap: 9 },
   controlHint: { color: "#FCEDBF", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
   actionRow: { flexDirection: "row", gap: 8 },

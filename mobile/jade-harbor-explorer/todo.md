@@ -18,6 +18,11 @@
 - [x] Add grounded jump physics and a touch jump action to the 3D explorer
 - [x] Add hold-to-sprint behavior, movement-state feedback, and a touch sprint action
 - [x] Add deterministic jump and sprint logic tests, then revalidate the updated prototype
-- [ ] Create a new repository branch for the Jade Harbor Android prototype
-- [ ] Add a reusable Android debug-build GitHub Actions workflow YAML
-- [ ] Commit and push the source and workflow to the requested branch
+- [x] Create a new repository branch for the Jade Harbor Android prototype
+- [x] Add a reusable Android debug-build GitHub Actions workflow YAML
+- [x] Commit and push the source and workflow to the requested branch
+- [x] Replace the basic drag control with a smooth floating Android joystick
+- [x] Add an original warm sunset-to-night lighting, water, fog, and lantern cycle to the 3D harbor
+- [x] Integrate day-night status and movement feedback with the mobile HUD
+- [x] Repair the Android debug workflow license step and revalidate the GitHub Actions YAML
+- [x] Commit and push the control, lighting, and workflow update to the feature branch
