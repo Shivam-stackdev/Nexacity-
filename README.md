@@ -18,6 +18,17 @@ A headless smoke test can be run from a terminal:
 godot4 --headless --path . --quit-after 3
 ```
 
+## Build a local Android APK
+
+The local Android SDK, OpenJDK 17, Godot export templates, and a debug keystore are configured in the sandbox. Build a sideloadable debug APK with:
+
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+./tools/build_local_apk.sh
+```
+
+The output is written to `build/compact-city-debug.apk`. It is arm64-oriented, zip-aligned, and debug-signed for local phone testing. Verify the package with Android Build-Tools before installing it with `adb install -r build/compact-city-debug.apk`. A physical Android device is still required to confirm touch behavior and on-device FPS.
+
 ## Structure
 
 ```text
