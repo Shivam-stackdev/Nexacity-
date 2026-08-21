@@ -26,3 +26,6 @@
 - [x] Integrate day-night status and movement feedback with the mobile HUD
 - [x] Repair the Android debug workflow license step and revalidate the GitHub Actions YAML
 - [x] Commit and push the control, lighting, and workflow update to the feature branch
+- [x] Add right-side swipe orbit input with bounded camera yaw
+- [x] Make joystick movement camera-relative and preserve smooth elevated follow behavior
+- [x] Add orbit-control hints, deterministic camera math tests, and publish the feature-branch update

@@ -15,6 +15,7 @@ import {
 } from "@/lib/jade-harbor-3d-world";
 import { getHarborDayCycle, type HarborTimeOfDay } from "@/lib/day-cycle";
 import { resolveJoystickInput, smoothAxis } from "@/lib/mobile-controls";
+import { applyOrbitDrag, cameraRelativeDirection, createCameraOrbit, smoothCameraOrbit } from "@/lib/camera-orbit";
 
 type HarborLighting = {
   sun: THREE.DirectionalLight;
@@ -235,6 +236,9 @@ export function JadeHarbor3D() {
   const frameRef = useRef<number | null>(null);
   const directionRef = useRef<Vec3>({ x: 0, z: 0 });
   const joystickTargetRef = useRef<Vec3>({ x: 0, z: 0 });
+  const orbitRef = useRef(createCameraOrbit());
+  const orbitTargetRef = useRef(createCameraOrbit());
+  const orbitGestureRef = useRef({ x: 0, y: 0 });
   const explorerPositionRef = useRef<Vec3>(EXPLORER_START);
   const explorerMotionRef = useRef(createExplorerMotion(EXPLORER_START));
   const activeLandmarkRef = useRef<string | null>(null);
@@ -246,6 +250,7 @@ export function JadeHarbor3D() {
   const joystickKnob = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const [paused, setPaused] = useState(false);
   const [joystickActive, setJoystickActive] = useState(false);
+  const [isOrbiting, setIsOrbiting] = useState(false);
   const [landmark, setLandmark] = useState<Landmark3D | null>(null);
   const [sceneStats, setSceneStats] = useState({ drawCalls: 0, triangles: 0 });
   const [isSprinting, setIsSprinting] = useState(false);
@@ -269,6 +274,9 @@ export function JadeHarbor3D() {
     explorerMotionRef.current = createExplorerMotion(EXPLORER_START);
     directionRef.current = { x: 0, z: 0 };
     joystickTargetRef.current = { x: 0, z: 0 };
+    orbitRef.current = createCameraOrbit();
+    orbitTargetRef.current = createCameraOrbit();
+    orbitGestureRef.current = { x: 0, y: 0 };
     activeLandmarkRef.current = null;
     jumpQueuedRef.current = false;
     sprintRef.current = false;
@@ -360,12 +368,14 @@ export function JadeHarbor3D() {
           x: smoothAxis(directionRef.current.x, joystickTargetRef.current.x, delta),
           z: smoothAxis(directionRef.current.z, joystickTargetRef.current.z, delta),
         };
+        orbitRef.current = smoothCameraOrbit(orbitRef.current, orbitTargetRef.current, delta);
         let motion = explorerMotionRef.current;
         if (jumpQueuedRef.current) {
           motion = requestJump(motion);
           jumpQueuedRef.current = false;
         }
-        motion = stepExplorerMotion(motion, directionRef.current, delta, sprintRef.current);
+        const worldDirection = cameraRelativeDirection(directionRef.current, orbitRef.current.yaw);
+        motion = stepExplorerMotion(motion, worldDirection, delta, sprintRef.current);
         explorerMotionRef.current = motion;
         explorerPositionRef.current = motion.position;
         runtime.explorer.position.x = motion.position.x;
@@ -378,7 +388,13 @@ export function JadeHarbor3D() {
         if (Math.hypot(directionRef.current.x, directionRef.current.z) > 0.02) {
           runtime.explorer.rotation.y = Math.atan2(directionRef.current.x, directionRef.current.z);
         }
-        const targetCamera = new THREE.Vector3(motion.position.x, 13.4 + motion.height * 0.15, motion.position.z + 13.8);
+        const cameraDistance = 19.2;
+        const horizontalDistance = Math.cos(orbitRef.current.pitch) * cameraDistance;
+        const targetCamera = new THREE.Vector3(
+          motion.position.x + Math.sin(orbitRef.current.yaw) * horizontalDistance,
+          1 + Math.sin(orbitRef.current.pitch) * cameraDistance + motion.height * 0.15,
+          motion.position.z + Math.cos(orbitRef.current.yaw) * horizontalDistance,
+        );
         runtime.camera.position.lerp(targetCamera, Math.min(1, delta * 4.8));
         runtime.camera.lookAt(motion.position.x, 1.0 + motion.height * 0.25, motion.position.z - 1.5);
         const nextLandmark = landmarkAt3D(motion.position);
@@ -438,6 +454,27 @@ export function JadeHarbor3D() {
     [joystickKnob],
   );
 
+  const cameraResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          orbitGestureRef.current = { x: 0, y: 0 };
+          setIsOrbiting(true);
+        },
+        onPanResponderMove: (_, gesture) => {
+          const deltaX = gesture.dx - orbitGestureRef.current.x;
+          const deltaY = gesture.dy - orbitGestureRef.current.y;
+          orbitGestureRef.current = { x: gesture.dx, y: gesture.dy };
+          orbitTargetRef.current = applyOrbitDrag(orbitTargetRef.current, deltaX, deltaY);
+        },
+        onPanResponderRelease: () => setIsOrbiting(false),
+        onPanResponderTerminate: () => setIsOrbiting(false),
+      }),
+    [],
+  );
+
   return (
     <View style={styles.shell}>
       <GLView style={StyleSheet.absoluteFill} onContextCreate={onContextCreate} />
@@ -458,6 +495,11 @@ export function JadeHarbor3D() {
               <Text style={styles.pauseButtonText}>Ⅱ</Text>
             </Pressable>
           </View>
+        </View>
+
+        <View {...cameraResponder.panHandlers} style={styles.cameraSwipeZone} />
+        <View pointerEvents="none" style={styles.cameraHint}>
+          <Text style={styles.cameraHintText}>{isOrbiting ? "ORBITING" : "SWIPE TO LOOK"}</Text>
         </View>
 
         {landmark ? (
@@ -532,6 +574,9 @@ const styles = StyleSheet.create({
   timeButtonText: { color: "#FFE2B5", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
   pauseButton: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(8, 21, 25, 0.86)", borderWidth: 1, borderColor: "rgba(239, 195, 105, 0.38)", alignItems: "center", justifyContent: "center" },
   pauseButtonText: { color: "#F4E8C8", fontSize: 17, fontWeight: "900" },
+  cameraSwipeZone: { position: "absolute", right: 0, top: 76, bottom: 156, width: "48%" },
+  cameraHint: { position: "absolute", right: 22, bottom: 160, borderRadius: 10, backgroundColor: "rgba(10, 31, 34, 0.52)", paddingHorizontal: 9, paddingVertical: 5 },
+  cameraHintText: { color: "#F2E1B0", fontSize: 9, fontWeight: "800", letterSpacing: 0.7 },
   landmarkCard: { position: "absolute", left: 16, right: 16, bottom: 128, flexDirection: "row", gap: 11, borderRadius: 18, padding: 14, backgroundColor: "rgba(18, 35, 37, 0.96)", borderWidth: 1, borderColor: "rgba(244, 222, 159, 0.35)" },
   landmarkAccent: { width: 5, borderRadius: 3 },
   landmarkCopy: { flex: 1 },

@@ -14,11 +14,11 @@ Jade Harbor is a portrait-first, Android-targeted **3D** exploration prototype s
 
 ## Portrait layout
 
-The exploration view uses the whole 9:16 screen. The top safe area contains a compact district chip, time-of-day readout, performance label, and pause button. The center holds a real-time 3D world seen through an elevated follow camera. The left bottom quarter reserves a floating analog joystick with a dead zone, eased movement response, and spring-centered knob for one-handed movement. The right bottom corner groups jump, hold-to-sprint, and restart actions. A subtle quest/landmark prompt sits above controls so it does not obscure the explorer.
+The exploration view uses the whole 9:16 screen. The top safe area contains a compact district chip, time-of-day readout, performance label, and pause button. The center holds a real-time 3D world seen through an elevated follow camera. The left bottom quarter reserves a floating analog joystick with a dead zone, eased movement response, and spring-centered knob for one-handed movement. The clear right-center region is a dedicated swipe surface: horizontal swipes orbit the camera and vertical swipes tilt it within comfortable elevated limits. The right bottom corner groups jump, hold-to-sprint, and restart actions. A subtle quest/landmark prompt sits above controls so it does not obscure the explorer.
 
 ## Core user flows
 
-The player opens the prototype and begins in the Lantern Market. They press and drag the floating left joystick to move in eight directions across 3D terrain; the input smooths into movement rather than snapping to a direction. The explorer turns toward movement while the camera follows at an elevated third-person angle. The player taps JUMP to perform a grounded jump and holds SPRINT for faster movement. Entering the Stone Bridge, Jade Gate, or Harbor Pier triggers a concise landmark card. The TIME control advances the lighting cycle for review, while the prototype also transitions gradually during play.
+The player opens the prototype and begins in the Lantern Market. They press and drag the floating left joystick to move in eight directions across 3D terrain; the input smooths into movement rather than snapping to a direction. The explorer turns toward camera-relative movement while the camera follows at an elevated third-person angle. A right-side swipe orbits the view without interfering with the movement pad or action buttons. The player taps JUMP to perform a grounded jump and holds SPRINT for faster movement. Entering the Stone Bridge, Jade Gate, or Harbor Pier triggers a concise landmark card. The TIME control advances the lighting cycle for review, while the prototype also transitions gradually during play.
 
 ## Visual direction
 
