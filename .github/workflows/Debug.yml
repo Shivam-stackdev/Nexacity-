@@ -1,4 +1,4 @@
-name: Build Nexacity Debug APK
+name: Debug APK
 
 on:
   workflow_dispatch:
