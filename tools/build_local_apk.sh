@@ -23,7 +23,11 @@ rm -rf "$WORK_DIR" "$UNSIGNED" "$ALIGNED" "$APK"
 "$GODOT_BIN" --headless --path "$PROJECT_DIR" --export-pack "Android Debug APK" "$PCK"
 mkdir -p "$WORK_DIR/assets"
 cp "$PCK" "$WORK_DIR/assets/data.pck"
-printf '%s\n' '--main-pack assets/data.pck' > "$WORK_DIR/assets/_cl_"
+python3 "$PROJECT_DIR/tools/write_command_line.py" "$WORK_DIR/assets/_cl_" \
+  --main-pack assets/data.pck \
+  --xr_mode_regular \
+  --xr-mode off \
+  --fullscreen
 
 cp "$TEMPLATE_DIR/android_debug.apk" "$UNSIGNED"
 (

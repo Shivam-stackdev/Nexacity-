@@ -29,6 +29,10 @@ export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
 The output is written to `build/compact-city-debug.apk`. It is arm64-oriented, zip-aligned, and debug-signed for local phone testing. Verify the package with Android Build-Tools before installing it with `adb install -r build/compact-city-debug.apk`. A physical Android device is still required to confirm touch behavior and on-device FPS.
 
+### Android startup crash fix
+
+The previous APK wrote `assets/_cl_` as plain text. Godot Android expects this file to use its binary command-line format: a little-endian argument count followed by a length-prefixed UTF-8 string for each argument. The build pipeline now generates that format through `tools/write_command_line.py`, including the `--main-pack assets/data.pck` argument. The APK is rebuilt and statically verified after this change.
+
 ## Structure
 
 ```text
