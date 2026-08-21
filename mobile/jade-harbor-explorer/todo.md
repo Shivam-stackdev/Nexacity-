@@ -1,0 +1,31 @@
+# Project TODO
+
+- [x] Copy approved Jade Harbor concept assets into the mobile project bundle
+- [x] Replace starter screen with a portrait top-down exploration prototype
+- [x] Add drag joystick movement and camera follow behavior
+- [x] Add walkable landmark zones and contextual landmark panel
+- [x] Add pause, restart, and status HUD controls
+- [x] Add responsive performance-aware world rendering and asset legend
+- [x] Add deterministic unit tests for map movement and landmark detection
+- [x] Generate a custom Jade Harbor app icon and apply branding configuration
+- [x] Verify TypeScript/tests and package a checkpoint for Android build
+- [x] Replace the 2.5D exploration view with a genuine 3D renderer and scene loop
+- [x] Add a 3D explorer model with touch movement and terrain collision
+- [x] Add an elevated third-person follow camera with camera-relative movement
+- [x] Build a walkable modular harbor district with 3D facades, bridges, props, water, lighting, and landmark zones
+- [x] Add 3D scene budget monitoring and deterministic world-logic tests
+- [x] Revalidate, checkpoint, and prepare the upgraded 3D Android build
+- [x] Add grounded jump physics and a touch jump action to the 3D explorer
+- [x] Add hold-to-sprint behavior, movement-state feedback, and a touch sprint action
+- [x] Add deterministic jump and sprint logic tests, then revalidate the updated prototype
+- [x] Create a new repository branch for the Jade Harbor Android prototype
+- [x] Add a reusable Android debug-build GitHub Actions workflow YAML
+- [x] Commit and push the source and workflow to the requested branch
+- [x] Replace the basic drag control with a smooth floating Android joystick
+- [x] Add an original warm sunset-to-night lighting, water, fog, and lantern cycle to the 3D harbor
+- [x] Integrate day-night status and movement feedback with the mobile HUD
+- [x] Repair the Android debug workflow license step and revalidate the GitHub Actions YAML
+- [x] Commit and push the control, lighting, and workflow update to the feature branch
+- [x] Add right-side swipe orbit input with bounded camera yaw
+- [x] Make joystick movement camera-relative and preserve smooth elevated follow behavior
+- [x] Add orbit-control hints, deterministic camera math tests, and publish the feature-branch update
