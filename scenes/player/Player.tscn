@@ -1,0 +1,47 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/Player.gd" id="1_player"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape_player"]
+radius = 0.38
+height = 1.75
+
+[sub_resource type="StandardMaterial3D" id="Material_body"]
+albedo_color = Color(0.16, 0.45, 0.72, 1)
+roughness = 0.8
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
+material = SubResource("Material_body")
+radius = 0.38
+height = 1.2
+radial_segments = 12
+rings = 4
+
+[sub_resource type="StandardMaterial3D" id="Material_head"]
+albedo_color = Color(0.96, 0.7, 0.55, 1)
+roughness = 0.8
+
+[sub_resource type="SphereMesh" id="SphereMesh_head"]
+material = SubResource("Material_head")
+height = 0.62
+radius = 0.31
+radial_segments = 12
+rings = 6
+
+[node name="Player" type="CharacterBody3D"]
+script = ExtResource("1_player")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.95, 0)
+shape = SubResource("CapsuleShape_player")
+
+[node name="Body" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.95, 0)
+mesh = SubResource("CapsuleMesh_body")
+
+[node name="Head" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.72, 0)
+mesh = SubResource("SphereMesh_head")
+
+[node name="Marker" type="Marker3D" parent="."]
+position = Vector3(0, 1.2, 0)

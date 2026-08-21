@@ -1,0 +1,51 @@
+; Engine configuration file.
+; Compact City Prototype - first playable milestone
+; Godot 4.4.1
+
+config_version=5
+
+[application]
+config/name="Compact City Prototype"
+config/description="A mobile-first third-person 3D city prototype."
+run/main_scene="res://scenes/world/Main.tscn"
+
+[display]
+
+[display/window]
+size/viewport_width=1280
+size/viewport_height=720
+size/window_width_override=960
+size/window_height_override=540
+stretch/mode="canvas_items"
+handheld/orientation=1
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.07, 0.1, 0.16, 1)
+textures/default_filters/use_nearest_mipmap_filter=false
+
+[physics]
+common/enable_pause_aware_picking=true
+
+[input]
+move_forward={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":87)]
+}
+move_backward={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":83)]
+}
+move_left={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":65)]
+}
+move_right={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":68)]
+}
+run={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":4194325)]
+}
