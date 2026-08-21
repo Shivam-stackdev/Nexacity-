@@ -1,12 +1,12 @@
 ; Engine configuration file.
-; Compact City Prototype - first playable milestone
+; Nexacity - Jade Harbor explorer prototype
 ; Godot 4.4.1
 
 config_version=5
 
 [application]
-config/name="Compact City Prototype"
-config/description="A mobile-first third-person 3D city prototype."
+config/name="Nexacity"
+config/description="A mobile-first third-person 3D explorer prototype set in an original jade mountain harbor city."
 run/main_scene="res://scenes/world/Main.tscn"
 
 [display]

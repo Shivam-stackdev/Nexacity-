@@ -1,4 +1,4 @@
-# Compact City Prototype
+# Nexacity
 
 This repository contains the first playable foundation milestone for a small anime-style 3D mobile city game. The project uses **Godot 4.4.1** and the Compatibility renderer so the scene is oriented toward mid-range Android hardware and a 30 FPS baseline.
 
@@ -27,9 +27,9 @@ export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ./tools/build_local_apk.sh
 ```
 
-The output is written to `build/compact-city-debug.apk`. It is arm64-oriented, zip-aligned, and debug-signed for local phone testing. Verify the package with Android Build-Tools before installing it with `adb install -r build/compact-city-debug.apk`. A physical Android device is still required to confirm touch behavior and on-device FPS.
+The Nexacity build script writes the future APK to `build/nexacity-debug.apk`. It is arm64-oriented, zip-aligned, and debug-signed for local phone testing. Verify the package with Android Build-Tools before installing it with `adb install -r build/nexacity-debug.apk`. A physical Android device is still required to confirm touch behavior and on-device FPS.
 
-## Jade Harbor feature slice
+## Nexacity — Jade Harbor feature slice
 
 The current prototype includes an original, copyright-safe mountain-harbor district inspired by broad Chinese architectural motifs without importing any third-party game assets. It adds a jade-water inlet, harbor bridge and piers, pavilion buildings, stone steps, lantern poles, market awnings, a generated mountain-harbor backdrop, a generated lantern banner texture, and a generated stone paving texture. The explorer avatar now has a teal travel coat, warm scarf, satchel, and walking staff.
 
@@ -42,7 +42,7 @@ The crash recording showed: `Couldn't load project data at path ''. Is the .pck 
 ## Structure
 
 ```text
-compact-city-prototype/
+nexacity/
 ├── scenes/
 │   ├── player/Player.tscn
 │   └── world/Main.tscn

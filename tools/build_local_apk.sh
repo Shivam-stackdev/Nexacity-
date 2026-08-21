@@ -8,10 +8,10 @@ TEMPLATE_DIR="${GODOT_TEMPLATE_DIR:-/home/ubuntu/.local/share/godot/export_templ
 KEYSTORE="${GODOT_DEBUG_KEYSTORE:-/home/ubuntu/.android/debug.keystore}"
 OUTPUT_DIR="$PROJECT_DIR/build"
 WORK_DIR="$OUTPUT_DIR/apk_assets"
-PCK="$OUTPUT_DIR/compact-city.pck"
+PCK="$OUTPUT_DIR/nexacity.pck"
 UNSIGNED="$OUTPUT_DIR/apk_unsigned.apk"
 ALIGNED="$OUTPUT_DIR/apk_aligned.apk"
-APK="$OUTPUT_DIR/compact-city-debug.apk"
+APK="$OUTPUT_DIR/nexacity-debug.apk"
 
 export ANDROID_SDK_ROOT="$ANDROID_SDK"
 export ANDROID_HOME="$ANDROID_SDK"
@@ -44,5 +44,5 @@ cp "$TEMPLATE_DIR/android_debug.apk" "$UNSIGNED"
   --out "$APK" "$ALIGNED"
 "$ANDROID_SDK/build-tools/34.0.0/apksigner" verify --verbose "$APK" >/dev/null
 
-printf 'APK_READY=%s\n' "$APK"
+printf 'NEXACITY_APK_READY=%s\n' "$APK"
 printf 'APK_SIZE_BYTES=%s\n' "$(stat -c '%s' "$APK")"
