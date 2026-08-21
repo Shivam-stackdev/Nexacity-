@@ -3,6 +3,7 @@ extends Node3D
 const PLAYER_SCENE := preload("res://scenes/player/Player.tscn")
 const TOUCH_CONTROLS := preload("res://scripts/ui/TouchControls.gd")
 const DEBUG_HUD := preload("res://scripts/ui/DebugHud.gd")
+const BOOT_OVERLAY := preload("res://scripts/ui/NexacityBootOverlay.gd")
 const MOUNTAIN_BACKDROP := preload("res://assets/liyue_inspired_mountain_backdrop.png")
 const LANTERN_BANNER := preload("res://assets/lantern_banner_texture.png")
 const STONE_PAVING := preload("res://assets/stone_paving_texture.png")
@@ -27,19 +28,62 @@ var palette := {
 	"stone": Color("#8d8170")
 }
 
+var _boot_overlay
+
 func _ready() -> void:
+	_boot_overlay = BOOT_OVERLAY.new()
+	_boot_overlay.name = "NexacityBootOverlay"
+	add_child(_boot_overlay)
+	await get_tree().process_frame
+	await _run_startup_sequence()
+
+func _run_startup_sequence() -> void:
+	_boot_overlay.set_stage("Initialize Godot")
+	await get_tree().process_frame
+
+	_boot_overlay.set_stage("Initialize environment")
 	_setup_environment()
+	if get_node_or_null("WorldEnvironment") == null:
+		_fail_boot("Environment initialization failed")
+		return
+	await get_tree().process_frame
+
+	_boot_overlay.set_stage("Generate world")
 	_build_city()
-	var touch_controls := TOUCH_CONTROLS.new()
-	touch_controls.name = "TouchControls"
-	add_child(touch_controls)
+	if get_child_count() < 8:
+		_fail_boot("World generation produced no scene content")
+		return
+	await get_tree().process_frame
+
+	_boot_overlay.set_stage("Load player")
 	var player := PLAYER_SCENE.instantiate()
 	player.name = "Player"
 	player.position = Vector3(0, 0.2, 18)
 	add_child(player)
+	if get_node_or_null("Player") == null:
+		_fail_boot("Player scene could not be instantiated")
+		return
+	await get_tree().process_frame
+
+	_boot_overlay.set_stage("Load touch controls")
+	var touch_controls := TOUCH_CONTROLS.new()
+	touch_controls.name = "TouchControls"
+	add_child(touch_controls)
+	if get_node_or_null("TouchControls") == null:
+		_fail_boot("Touch controls could not be initialized")
+		return
 	var hud := DEBUG_HUD.new()
 	hud.name = "DebugHud"
 	add_child(hud)
+	await get_tree().process_frame
+
+	_boot_overlay.set_stage("Ready")
+	_boot_overlay.complete()
+
+func _fail_boot(message: String) -> void:
+	if _boot_overlay != null:
+		_boot_overlay.show_error(message)
+	push_error("Nexacity startup failure: " + message)
 
 func _setup_environment() -> void:
 	var environment := Environment.new()
@@ -57,6 +101,7 @@ func _setup_environment() -> void:
 	environment.ambient_light_energy = 0.72
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	var world_environment := WorldEnvironment.new()
+	world_environment.name = "WorldEnvironment"
 	world_environment.environment = environment
 	add_child(world_environment)
 
