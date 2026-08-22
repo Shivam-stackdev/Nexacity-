@@ -49,9 +49,9 @@ func _run_startup_sequence() -> void:
 	await get_tree().process_frame
 
 	_boot_overlay.set_stage("Generate world")
-	_build_city()
-	if get_child_count() < 8:
-		_fail_boot("World generation produced no scene content")
+	await _build_city_staged()
+	if get_node_or_null("StoneGround") == null or get_node_or_null("JadeWater") == null or get_node_or_null("MountainHarborBackdrop") == null:
+		_fail_boot("World generation did not complete its required landmarks")
 		return
 	await get_tree().process_frame
 
@@ -64,6 +64,9 @@ func _run_startup_sequence() -> void:
 		_fail_boot("Player scene could not be instantiated")
 		return
 	await get_tree().process_frame
+	if get_viewport().get_camera_3d() == null:
+		_fail_boot("Gameplay camera was not activated")
+		return
 
 	_boot_overlay.set_stage("Load touch controls")
 	var touch_controls := TOUCH_CONTROLS.new()
@@ -114,7 +117,7 @@ func _setup_environment() -> void:
 	sun.directional_shadow_max_distance = 55.0
 	add_child(sun)
 
-func _build_city() -> void:
+func _build_city_staged() -> void:
 	_add_textured_box("StoneGround", Vector3(72, 0.5, 72), Vector3(0, -0.25, 0), STONE_PAVING, true)
 	_add_box("MainRoad", Vector3(9, 0.08, 72), Vector3(0, 0.03, 0), palette["road"], false)
 	_add_box("CrossRoad", Vector3(72, 0.08, 8), Vector3(0, 0.04, -4), palette["road"], false)
@@ -126,20 +129,32 @@ func _build_city() -> void:
 		_add_box("CenterLine", Vector3(0.18, 0.02, 2.4), Vector3(0, 0.11, z), palette["accent"], false)
 	for x in range(-30, 35, 6):
 		_add_box("CrossLine", Vector3(2.4, 0.02, 0.18), Vector3(x, 0.12, -4), palette["accent"], false)
+	await get_tree().process_frame
 
+	_boot_overlay.set_stage("Build city districts")
 	_build_block(Vector3(-15, 0, -22), Vector2(3, 3), palette["building_a"])
 	_build_block(Vector3(15, 0, -22), Vector2(3, 3), palette["building_b"])
 	_build_block(Vector3(-15, 0, 9), Vector2(3, 2), palette["building_c"])
+	await get_tree().process_frame
+
 	_build_block(Vector3(14, 0, 9), Vector2(3, 2), palette["building_d"])
 	_build_block(Vector3(29, 0, 5), Vector2(4, 2), palette["building_b"])
 	_build_block(Vector3(-30, 0, -2), Vector2(3, 2), palette["building_c"])
 	_build_block(Vector3(29, 0, -19), Vector2(3, 3), palette["building_a"])
+	await get_tree().process_frame
 
+	_boot_overlay.set_stage("Add city landmarks")
 	_build_park(Vector3(-28, 0, 23))
 	_build_school(Vector3(19, 0, -28))
 	_build_petrol_station(Vector3(28, 0, 29))
 	_build_bus_stop(Vector3(-7, 0, -15))
+	await get_tree().process_frame
+
+	_boot_overlay.set_stage("Assemble harbor")
 	_build_harbor_district()
+	await get_tree().process_frame
+
+	_boot_overlay.set_stage("Finalize world")
 	_build_race_markers()
 	_add_signs()
 
